@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Bağımlılıkları önce kopyala (cache için)
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 # Uygulama dosyalarını kopyala
 COPY . .
