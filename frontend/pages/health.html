@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="midnight">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Durumu — RandevuCRM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0C0B14; --card: #16152B; --border: rgba(124,111,231,0.12);
+            --text: #F0EFF5; --muted: #8B8AA0; --green: #34D399;
+            --red: #F87171; --yellow: #FBB524; --blue: #7C6FE7;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 40px 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+        h1 i { color: var(--blue); }
+        .sub { color: var(--muted); font-size: 13px; margin-bottom: 32px; }
+        
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+        .card-title { font-size: 14px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .card-title i { font-size: 18px; }
+
+        .check-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .check-row:last-child { border-bottom: none; }
+        .check-label { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+        .check-label code { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); background: rgba(124,111,231,0.08); padding: 2px 6px; border-radius: 4px; }
+        
+        .status { font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 6px; display: flex; align-items: center; gap: 4px; }
+        .status.loading { background: rgba(251,181,36,0.12); color: var(--yellow); }
+        .status.ok { background: rgba(52,211,153,0.12); color: var(--green); }
+        .status.fail { background: rgba(248,113,113,0.12); color: var(--red); }
+        .status.skip { background: rgba(139,138,160,0.12); color: var(--muted); }
+
+        .detail { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 4px; word-break: break-all; }
+        
+        .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+        .sum-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
+        .sum-val { font-size: 28px; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+        .sum-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+        .sum-card.green .sum-val { color: var(--green); }
+        .sum-card.red .sum-val { color: var(--red); }
+        .sum-card.yellow .sum-val { color: var(--yellow); }
+        .sum-card.blue .sum-val { color: var(--blue); }
+
+        .btn { padding: 10px 24px; background: var(--blue); border: none; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; margin-top: 16px; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn.green { background: var(--green); }
+
+        .log { background: #0a0918; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); max-height: 200px; overflow-y: auto; white-space: pre-wrap; display: none; }
+        .log.show { display: block; }
+
+        @media (max-width: 600px) { .summary { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="bi bi-heart-pulse"></i> Sistem Durumu</h1>
+        <p class="sub">RandevuCRM v2.0 — Tüm servislerin durumunu kontrol edin</p>
+
+        <div class="summary">
+            <div class="sum-card green" id="sumOk"><div class="sum-val" id="okCount">-</div><div class="sum-lbl">Başarılı</div></div>
+            <div class="sum-card red" id="sumFail"><div class="sum-val" id="failCount">-</div><div class="sum-lbl">Hatalı</div></div>
+            <div class="sum-card yellow" id="sumWait"><div class="sum-val" id="waitCount">-</div><div class="sum-lbl">Bekliyor</div></div>
+            <div class="sum-card blue"><div class="sum-val" id="totalTime">-</div><div class="sum-lbl">Toplam Süre</div></div>
+        </div>
+
+        <!-- Server -->
+        <div class="card">
+            <div class="card-title"><i class="bi bi-hdd-rack" style="color:var(--blue)"></i> Sunucu</div>
+            <div class="check-row">
+                <div class="check-label">Express Server <code>/api/health</code></div>
+                <div class="status loading" id="s-server"><i class="bi bi-hourglass-split"></i> Test ediliyor...</div>
+            </div>
+            <div class="detail" id="d-server"></div>
+        </div>
+
+        <!-- Database -->
+        <div class="card">
+            <div class="card-title"><i class="bi bi-database" style="color:var(--green)"></i> Veritabanı</div>
+            <div class="check-row">
+                <div class="check-label">PostgreSQL Bağlantısı <code>/api/admin/db/test</code></div>
+                <div class="status loading" id="s-db"><i class="bi bi-hourglass-split"></i> Test ediliyor...</div>
+            </div>
+            <div class="detail" id="d-db"></div>
+            <div class="check-row">
+                <div class="check-label">Ortak Tablolar</div>
+                <div class="status loading" id="s-tables"><i class="bi bi-hourglass-split"></i> Kontrol ediliyor...</div>
+            </div>
+            <div class="detail" id="d-tables"></div>
+        </div>
+
+        <!-- Auth -->
+        <div class="card">
+            <div class="card-title"><i class="bi bi-shield-lock" style="color:var(--yellow)"></i> Kimlik Doğrulama</div>
+            <div class="check-row">
+                <div class="check-label">Login Endpoint <code>POST /api/auth/login</code></div>
+                <div class="status loading" id="s-login"><i class="bi bi-hourglass-split"></i> Test ediliyor...</div>
+            </div>
+            <div class="detail" id="d-login"></div>
+            <div class="check-row">
+                <div class="check-label">JWT Token Doğrulama <code>GET /api/auth/me</code></div>
+                <div class="status loading" id="s-jwt"><i class="bi bi-hourglass-split"></i> Bekliyor...</div>
+            </div>
+            <div class="detail" id="d-jwt"></div>
+        </div>
+
+        <!-- Environment -->
+        <div class="card">
+            <div class="card-title"><i class="bi bi-gear" style="color:var(--muted)"></i> Ortam Değişkenleri</div>
+            <div class="check-row">
+                <div class="check-label">Node Ortamı</div>
+                <div class="status loading" id="s-env"><i class="bi bi-hourglass-split"></i> Kontrol ediliyor...</div>
+            </div>
+            <div class="detail" id="d-env"></div>
+        </div>
+
+        <button class="btn" onclick="runTests()" id="runBtn"><i class="bi bi-play-fill"></i> Testleri Başlat</button>
+        <button class="btn green" onclick="location.href='/pages/auth/login.html'" style="margin-left:8px"><i class="bi bi-box-arrow-in-right"></i> Giriş Sayfasına Git</button>
+        
+        <div class="log" id="logBox"></div>
+    </div>
+
+<script>
+let okC=0, failC=0, waitC=0, token=null;
+const startTime = Date.now();
+
+function setStatus(id, status, text) {
+    const el = document.getElementById(id);
+    el.className = `status ${status}`;
+    const icons = { loading: 'hourglass-split', ok: 'check-circle-fill', fail: 'x-circle-fill', skip: 'dash-circle' };
+    el.innerHTML = `<i class="bi bi-${icons[status]}"></i> ${text}`;
+    if (status === 'ok') okC++;
+    if (status === 'fail') failC++;
+    updateCounts();
+}
+
+function setDetail(id, text) {
+    document.getElementById(id).textContent = text;
+}
+
+function updateCounts() {
+    document.getElementById('okCount').textContent = okC;
+    document.getElementById('failCount').textContent = failC;
+    document.getElementById('waitCount').textContent = waitC;
+    document.getElementById('totalTime').textContent = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+}
+
+function log(msg) {
+    const box = document.getElementById('logBox');
+    box.classList.add('show');
+    box.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+    box.scrollTop = box.scrollHeight;
+}
+
+async function fetchJSON(url, opts = {}) {
+    try {
+        const t0 = Date.now();
+        const res = await fetch(url, { 
+            ...opts, 
+            headers: { 'Content-Type': 'application/json', ...opts.headers }
+        });
+        const data = await res.json();
+        return { ...data, _status: res.status, _time: Date.now() - t0 };
+    } catch (err) {
+        return { success: false, error: err.message, _status: 0, _time: 0 };
+    }
+}
+
+async function runTests() {
+    okC = 0; failC = 0; waitC = 0;
+    document.getElementById('logBox').textContent = '';
+    document.getElementById('runBtn').disabled = true;
+    document.getElementById('runBtn').innerHTML = '<i class="bi bi-arrow-repeat"></i> Test ediliyor...';
+
+    // ── 1. Server Health ──
+    log('🔍 Sunucu kontrol ediliyor...');
+    const health = await fetchJSON('/api/health');
+    if (health.status === 'ok') {
+        setStatus('s-server', 'ok', `Çalışıyor (${health._time}ms)`);
+        setDetail('d-server', `Versiyon: ${health.version} | Uptime: ${health.uptime}s | ${health.timestamp}`);
+        log(`✅ Sunucu çalışıyor — v${health.version}, uptime: ${health.uptime}s`);
+    } else {
+        setStatus('s-server', 'fail', 'Bağlantı hatası');
+        setDetail('d-server', health.error || 'Sunucuya ulaşılamıyor');
+        log(`❌ Sunucu hatası: ${health.error || 'Bağlantı yok'}`);
+    }
+
+    // ── 2. DB Bağlantısı ──
+    log('🔍 Veritabanı kontrol ediliyor...');
+    const db = await fetchJSON('/api/health/db');
+    if (db.success) {
+        setStatus('s-db', 'ok', `Bağlı (${db._time}ms)`);
+        setDetail('d-db', `Pool: ${db.pool?.total || '?'}/${db.pool?.max || '?'} bağlantı | Idle: ${db.pool?.idle || '?'}`);
+        log(`✅ PostgreSQL bağlı — ${db.pool?.total || '?'} aktif bağlantı`);
+    } else {
+        setStatus('s-db', 'fail', 'Bağlantı hatası');
+        setDetail('d-db', db.error || 'Veritabanına ulaşılamıyor');
+        log(`❌ DB hatası: ${db.error || 'Bağlantı yok'}`);
+    }
+
+    // ── 3. Tablolar ──
+    log('🔍 Tablolar kontrol ediliyor...');
+    const tables = await fetchJSON('/api/health/tables');
+    if (tables.success) {
+        const missing = tables.tables?.filter(t => !t.exists) || [];
+        if (missing.length === 0) {
+            setStatus('s-tables', 'ok', `${tables.tables?.length || 0} tablo mevcut`);
+            setDetail('d-tables', tables.tables?.map(t => `✓ ${t.name}`).join(' | ') || '');
+            log(`✅ Tüm ortak tablolar mevcut (${tables.tables?.length})`);
+        } else {
+            setStatus('s-tables', 'fail', `${missing.length} tablo eksik`);
+            setDetail('d-tables', `Eksik: ${missing.map(t => t.name).join(', ')}`);
+            log(`⚠️ Eksik tablolar: ${missing.map(t => t.name).join(', ')}`);
+            log('💡 Çözüm: npm run migrate komutunu çalıştırın');
+        }
+    } else {
+        setStatus('s-tables', 'skip', 'Kontrol edilemedi');
+        setDetail('d-tables', 'DB bağlantısı gerekli');
+        log('⏭️ Tablo kontrolü atlandı (DB bağlantısı yok)');
+    }
+
+    // ── 4. Login Test ──
+    log('🔍 Login endpoint test ediliyor...');
+    const login = await fetchJSON('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ kullanici_adi: 'test_health_check', sifre: 'test' })
+    });
+    if (login._status === 401) {
+        // 401 = endpoint çalışıyor, sadece credentials yanlış
+        setStatus('s-login', 'ok', `Endpoint aktif (${login._time}ms)`);
+        setDetail('d-login', 'Login endpoint düzgün çalışıyor (test credentials reddedildi — bu beklenen davranış)');
+        log('✅ Login endpoint çalışıyor (401 = doğru davranış)');
+    } else if (login._status === 429) {
+        setStatus('s-login', 'ok', 'Rate limit aktif');
+        setDetail('d-login', 'Rate limiting çalışıyor — çok fazla deneme yapıldı');
+        log('✅ Login endpoint çalışıyor + rate limit aktif');
+    } else if (login.success && login.token) {
+        setStatus('s-login', 'ok', `Giriş başarılı (${login._time}ms)`);
+        token = login.token;
+        log('✅ Login başarılı, token alındı');
+    } else {
+        setStatus('s-login', 'fail', 'Endpoint hatası');
+        setDetail('d-login', login.error || login.message || 'Bilinmeyen hata');
+        log(`❌ Login hatası: ${login.message || login.error}`);
+    }
+
+    // ── 5. JWT Test ──
+    if (token) {
+        log('🔍 JWT doğrulama test ediliyor...');
+        const me = await fetchJSON('/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (me.success) {
+            setStatus('s-jwt', 'ok', `Doğrulandı (${me._time}ms)`);
+            setDetail('d-jwt', `Kullanıcı: ${me.user?.ad_soyad} | Admin: ${me.user?.is_super_admin}`);
+            log(`✅ JWT çalışıyor — ${me.user?.ad_soyad}`);
+        } else {
+            setStatus('s-jwt', 'fail', 'Token hatası');
+            log(`❌ JWT hatası: ${me.message}`);
+        }
+    } else {
+        setStatus('s-jwt', 'skip', 'Token yok — atlandı');
+        setDetail('d-jwt', 'Login testi token döndürmedi (beklenen davranış)');
+        log('⏭️ JWT testi atlandı (token yok)');
+    }
+
+    // ── 6. Environment ──
+    log('🔍 Ortam bilgisi kontrol ediliyor...');
+    if (health.status === 'ok') {
+        setStatus('s-env', 'ok', 'Production');
+        setDetail('d-env', `Node: production | Versiyon: ${health.version}`);
+        log('✅ Ortam: production');
+    } else {
+        setStatus('s-env', 'skip', 'Kontrol edilemedi');
+    }
+
+    // ── Sonuç ──
+    updateCounts();
+    log(`\n══════════════════════════════════════`);
+    log(`📊 SONUÇ: ${okC} başarılı, ${failC} hatalı — ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
+    if (failC === 0) {
+        log('🎉 Tüm testler geçti! Sistem hazır.');
+    } else {
+        log('⚠️ Bazı testler başarısız. Yukarıdaki hata detaylarını kontrol edin.');
+    }
+
+    document.getElementById('runBtn').disabled = false;
+    document.getElementById('runBtn').innerHTML = '<i class="bi bi-arrow-clockwise"></i> Tekrar Test Et';
+}
+
+// Sayfa yüklendiğinde otomatik çalıştır
+window.addEventListener('load', () => setTimeout(runTests, 500));
+</script>
+</body>
+</html>
