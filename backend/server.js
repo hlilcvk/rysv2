@@ -5,7 +5,7 @@ require('dotenv').config();
 
 const app = require('./app');
 const path = require('path');
-const { testConnection } = require('./config/db');
+const { testConnection, getStats, masterPool } = require('./config/db');
 const logger = require('./utils/logger');
 
 // ══════════════════════════════════════
@@ -16,7 +16,6 @@ const logger = require('./utils/logger');
 app.use('/api/auth', require('./routes/auth.routes'));
 
 // Health check endpoints (public — test sayfası için)
-const { testConnection, getStats } = require('./config/db');
 app.get('/api/health/db', async (req, res) => {
     const result = await testConnection();
     res.json(result);
@@ -31,7 +30,7 @@ app.get('/api/health/tables', async (req, res) => {
         ];
         const tables = [];
         for (const name of requiredTables) {
-            const exists = await require('./config/db').masterPool.query(
+            const exists = await masterPool.query(
                 `SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = $1)`, [name]
             );
             tables.push({ name, exists: exists.rows[0].exists });
@@ -62,6 +61,8 @@ app.get('/api/health/tables', async (req, res) => {
 // ══════════════════════════════════════
 // STATIC FRONTEND
 // ══════════════════════════════════════
+
+const express = require('express');
 
 // Frontend dosyalarını sun
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
