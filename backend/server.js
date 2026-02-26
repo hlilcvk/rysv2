@@ -5,7 +5,7 @@ require('dotenv').config();
 
 const app = require('./app');
 const path = require('path');
-const { testConnection } = require('./config/db');
+const { testConnection, getStats, masterPool } = require('./config/db');
 const logger = require('./utils/logger');
 
 // ══════════════════════════════════════
@@ -15,8 +15,21 @@ const logger = require('./utils/logger');
 // Auth
 app.use('/api/auth', require('./routes/auth.routes'));
 
+// Uzmanlar
+app.use('/api/experts', require('./routes/expert.routes'));
+
+// Randevular
+app.use('/api/appointments', require('./routes/appointment.routes'));
+
+// Hizmetler
+app.use('/api/services', require('./routes/service.routes'));
+
+// Legacy uyumluluk (eski frontend /api/appointments/uzmanlar kullanıyor)
+const { auth: authMw } = require('./middleware/auth');
+const appointmentCtrl = require('./controllers/appointment.controller');
+app.get('/api/appointments/uzmanlar', authMw, appointmentCtrl.legacyExperts);
+
 // Health check endpoints (public — test sayfası için)
-const { testConnection, getStats } = require('./config/db');
 app.get('/api/health/db', async (req, res) => {
     const result = await testConnection();
     res.json(result);
@@ -31,7 +44,7 @@ app.get('/api/health/tables', async (req, res) => {
         ];
         const tables = [];
         for (const name of requiredTables) {
-            const exists = await require('./config/db').masterPool.query(
+            const exists = await masterPool.query(
                 `SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = $1)`, [name]
             );
             tables.push({ name, exists: exists.rows[0].exists });
@@ -42,11 +55,8 @@ app.get('/api/health/tables', async (req, res) => {
     }
 });
 
-// TODO: Modül modül eklenecek
-// app.use('/api/appointments',  require('./routes/appointment.routes'));
+// TODO: Sonraki modüller eklenecek
 // app.use('/api/customers',     require('./routes/customer.routes'));
-// app.use('/api/experts',       require('./routes/expert.routes'));
-// app.use('/api/services',      require('./routes/service.routes'));
 // app.use('/api/notifications', require('./routes/notification.routes'));
 // app.use('/api/surveys',       require('./routes/survey.routes'));
 // app.use('/api/finance',       require('./routes/finance.routes'));
@@ -56,12 +66,13 @@ app.get('/api/health/tables', async (req, res) => {
 // app.use('/api/analytics',     require('./routes/analytics.routes'));
 // app.use('/api/settings',      require('./routes/settings.routes'));
 // app.use('/api/admin',         require('./routes/admin.routes'));
-// app.use('/api/admin/finance', require('./routes/admin.finance.routes'));
 // app.use('/api/n8n',           require('./routes/n8n.routes'));
 
 // ══════════════════════════════════════
 // STATIC FRONTEND
 // ══════════════════════════════════════
+
+const express = require('express');
 
 // Frontend dosyalarını sun
 app.use(express.static(path.join(__dirname, '..', 'frontend')));

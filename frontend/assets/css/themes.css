@@ -1,0 +1,110 @@
+/* frontend/assets/css/themes.css */
+/* 4 Tema: Midnight, Pastel, Ocean, Light */
+
+/* ═══ MIDNIGHT (Koyu Mor) ═══ */
+[data-theme="midnight"] {
+    --primary: #7C6FE7;
+    --primary-hover: #6B5DD6;
+    --primary-alpha: rgba(124,111,231,0.12);
+    --bg-body: #0C0B14;
+    --bg-sidebar: #100F1F;
+    --bg-card: #16152B;
+    --bg-input: #1C1B35;
+    --bg-hover: #1E1D3A;
+    --border: rgba(124,111,231,0.12);
+    --border-hover: rgba(124,111,231,0.25);
+    --text-primary: #F0EFF5;
+    --text-secondary: #C4C3D4;
+    --text-tertiary: #8B8AA0;
+    --text-muted: #5A596E;
+    --green: #34D399;
+    --green-alpha: rgba(52,211,153,0.12);
+    --red: #F87171;
+    --red-alpha: rgba(248,113,113,0.12);
+    --yellow: #FBB524;
+    --yellow-alpha: rgba(251,181,36,0.12);
+    --blue: #3B82F6;
+    --blue-alpha: rgba(59,130,246,0.12);
+    --shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+
+/* ═══ PASTEL (Yumuşak Pembe) ═══ */
+[data-theme="pastel"] {
+    --primary: #B47AEA;
+    --primary-hover: #A366DD;
+    --primary-alpha: rgba(180,122,234,0.12);
+    --bg-body: #FDF6FF;
+    --bg-sidebar: #F5EDF8;
+    --bg-card: #FFFFFF;
+    --bg-input: #F9F4FC;
+    --bg-hover: #F3ECF6;
+    --border: rgba(180,122,234,0.15);
+    --border-hover: rgba(180,122,234,0.3);
+    --text-primary: #2D1B4E;
+    --text-secondary: #5C4A7A;
+    --text-tertiary: #8B7AA6;
+    --text-muted: #B0A3C5;
+    --green: #22C55E;
+    --green-alpha: rgba(34,197,94,0.1);
+    --red: #EF4444;
+    --red-alpha: rgba(239,68,68,0.1);
+    --yellow: #F59E0B;
+    --yellow-alpha: rgba(245,158,11,0.1);
+    --blue: #6366F1;
+    --blue-alpha: rgba(99,102,241,0.1);
+    --shadow: 0 2px 12px rgba(180,122,234,0.08);
+}
+
+/* ═══ OCEAN (Mavi-Lacivert) ═══ */
+[data-theme="ocean"] {
+    --primary: #3B82F6;
+    --primary-hover: #2563EB;
+    --primary-alpha: rgba(59,130,246,0.12);
+    --bg-body: #0B1628;
+    --bg-sidebar: #0D1A2D;
+    --bg-card: #132035;
+    --bg-input: #182740;
+    --bg-hover: #1B2E4A;
+    --border: rgba(59,130,246,0.12);
+    --border-hover: rgba(59,130,246,0.25);
+    --text-primary: #E8F0FE;
+    --text-secondary: #B8CCE8;
+    --text-tertiary: #7B9BC5;
+    --text-muted: #4A6A94;
+    --green: #34D399;
+    --green-alpha: rgba(52,211,153,0.12);
+    --red: #F87171;
+    --red-alpha: rgba(248,113,113,0.12);
+    --yellow: #FBB524;
+    --yellow-alpha: rgba(251,181,36,0.12);
+    --blue: #60A5FA;
+    --blue-alpha: rgba(96,165,250,0.12);
+    --shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+
+/* ═══ LIGHT (Açık) ═══ */
+[data-theme="light"] {
+    --primary: #6366F1;
+    --primary-hover: #4F46E5;
+    --primary-alpha: rgba(99,102,241,0.08);
+    --bg-body: #F8F9FB;
+    --bg-sidebar: #FFFFFF;
+    --bg-card: #FFFFFF;
+    --bg-input: #F3F4F6;
+    --bg-hover: #EEF0F4;
+    --border: rgba(99,102,241,0.1);
+    --border-hover: rgba(99,102,241,0.2);
+    --text-primary: #1A1A2E;
+    --text-secondary: #4A4A6A;
+    --text-tertiary: #7A7A9A;
+    --text-muted: #ACACC4;
+    --green: #22C55E;
+    --green-alpha: rgba(34,197,94,0.08);
+    --red: #EF4444;
+    --red-alpha: rgba(239,68,68,0.08);
+    --yellow: #F59E0B;
+    --yellow-alpha: rgba(245,158,11,0.08);
+    --blue: #3B82F6;
+    --blue-alpha: rgba(59,130,246,0.08);
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+}

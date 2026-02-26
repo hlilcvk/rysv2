@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="midnight">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Takvim — RandevuCRM</title>
+    <link rel="stylesheet" href="/assets/css/themes.css">
+    <link rel="stylesheet" href="/assets/css/base.css">
+    <link rel="stylesheet" href="/assets/css/sidebar.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        /* Calendar specific */
+        .calendar-header { display:flex; align-items:center; gap:12px; padding:12px 24px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+        .date-nav { display:flex; align-items:center; gap:8px; }
+        .date-nav button { background:none; border:1px solid var(--border); border-radius:6px; padding:5px 10px; color:var(--text-secondary); cursor:pointer; font-size:14px; }
+        .date-nav button:hover { background:var(--bg-hover); color:var(--text-primary); }
+        .date-display { font-size:15px; font-weight:700; min-width:180px; text-align:center; }
+        .today-btn { padding:5px 12px; background:var(--primary-alpha); color:var(--primary); border:none; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; }
+        
+        .expert-filter { display:flex; gap:6px; margin-left:auto; flex-wrap:wrap; }
+        .expert-chip { padding:4px 10px; border-radius:16px; font-size:11px; font-weight:600; cursor:pointer; border:2px solid transparent; transition:all 0.15s; }
+        .expert-chip.active { border-color: currentColor; }
+        .expert-chip:hover { opacity:0.8; }
+
+        /* Calendar grid */
+        .calendar-container { display:flex; flex:1; overflow-x:auto; overflow-y:auto; height:calc(100vh - 140px); }
+        .time-column { width:56px; min-width:56px; border-right:1px solid var(--border); background:var(--bg-card); position:sticky; left:0; z-index:10; }
+        .time-slot { height:60px; padding:4px 8px 0 0; text-align:right; font-size:10px; font-weight:600; color:var(--text-muted); font-family:'JetBrains Mono',monospace; }
+        
+        .expert-column { flex:1; min-width:200px; border-right:1px solid var(--border); position:relative; }
+        .expert-header { padding:10px 12px; text-align:center; border-bottom:1px solid var(--border); background:var(--bg-card); position:sticky; top:0; z-index:5; }
+        .expert-name { font-size:12px; font-weight:700; }
+        .expert-spec { font-size:10px; color:var(--text-muted); }
+        .expert-slots { position:relative; }
+        .slot-row { height:60px; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.1s; }
+        .slot-row:hover { background:var(--primary-alpha); }
+
+        /* Appointment cards */
+        .appt-card {
+            position:absolute; left:4px; right:4px;
+            border-radius:8px; padding:6px 8px; cursor:pointer;
+            font-size:11px; overflow:hidden; z-index:2;
+            border-left:3px solid; transition:box-shadow 0.15s;
+        }
+        .appt-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.3); z-index:3; }
+        .appt-card .appt-name { font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .appt-card .appt-time { font-size:10px; opacity:0.8; margin-top:1px; }
+        .appt-card .appt-service { font-size:9px; opacity:0.7; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .appt-card .appt-status { position:absolute; top:4px; right:6px; }
+        .appt-card .status-dot { width:6px; height:6px; border-radius:50%; display:inline-block; }
+
+        /* Now line */
+        .now-line { position:absolute; left:0; right:0; height:2px; background:var(--red); z-index:4; pointer-events:none; }
+        .now-line::before { content:''; position:absolute; left:-4px; top:-3px; width:8px; height:8px; border-radius:50%; background:var(--red); }
+
+        /* Summary bar */
+        .summary-bar { display:flex; gap:16px; padding:10px 24px; border-top:1px solid var(--border); background:var(--bg-card); }
+        .sum-item { font-size:12px; color:var(--text-tertiary); }
+        .sum-item strong { color:var(--text-primary); font-weight:700; }
+
+        /* Mini calendar */
+        .mini-cal { padding:12px; }
+        .mini-cal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+        .mini-cal-header span { font-size:12px; font-weight:700; }
+        .mini-cal-header button { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:14px; }
+        .mini-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; text-align:center; }
+        .mini-cal-day { font-size:9px; color:var(--text-muted); padding:2px; font-weight:600; }
+        .mini-cal-date { font-size:11px; padding:4px; border-radius:6px; cursor:pointer; }
+        .mini-cal-date:hover { background:var(--bg-hover); }
+        .mini-cal-date.today { background:var(--primary); color:#fff; font-weight:700; }
+        .mini-cal-date.selected { border:2px solid var(--primary); }
+        .mini-cal-date.other { color:var(--text-muted); opacity:0.4; }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar JS ile oluşturulacak -->
+        <div class="main-content" id="mainContent">
+            <!-- Header -->
+            <div class="top-header">
+                <div class="header-left">
+                    <div class="header-title" id="headerTitle">Takvim</div>
+                    <div class="header-date" id="headerDate"></div>
+                </div>
+                <div class="header-right">
+                    <div class="theme-dots">
+                        <div class="theme-dot" data-theme="midnight" title="Midnight"></div>
+                        <div class="theme-dot" data-theme="pastel" title="Pastel"></div>
+                        <div class="theme-dot" data-theme="ocean" title="Ocean"></div>
+                        <div class="theme-dot" data-theme="light" title="Light"></div>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="openNewAppointment()"><i class="bi bi-plus-lg"></i> Randevu</button>
+                </div>
+            </div>
+
+            <!-- Usage Banners -->
+            <div id="usageBanners"></div>
+
+            <!-- Calendar Header -->
+            <div class="calendar-header">
+                <div class="date-nav">
+                    <button onclick="changeDate(-1)"><i class="bi bi-chevron-left"></i></button>
+                    <div class="date-display" id="dateDisplay"></div>
+                    <button onclick="changeDate(1)"><i class="bi bi-chevron-right"></i></button>
+                    <button class="today-btn" onclick="goToday()">Bugün</button>
+                </div>
+                <div class="expert-filter" id="expertFilter"></div>
+            </div>
+
+            <!-- Calendar Grid -->
+            <div class="calendar-container" id="calendarContainer"></div>
+
+            <!-- Summary Bar -->
+            <div class="summary-bar" id="summaryBar"></div>
+        </div>
+    </div>
+
+    <!-- Randevu Modal -->
+    <div class="modal-overlay" id="apptModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Yeni Randevu</div>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Müşteri Adı *</label>
+                <input type="text" class="form-input" id="mCustomer" placeholder="Ad Soyad">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Telefon</label>
+                <input type="tel" class="form-input" id="mPhone" placeholder="05XX XXX XXXX">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="form-group">
+                    <label class="form-label">Uzman</label>
+                    <select class="form-input" id="mExpert"></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Hizmet</label>
+                    <select class="form-input" id="mService"></select>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div class="form-group">
+                    <label class="form-label">Başlangıç</label>
+                    <input type="time" class="form-input" id="mStart">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Bitiş</label>
+                    <input type="time" class="form-input" id="mEnd">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Not</label>
+                <input type="text" class="form-input" id="mNotes" placeholder="İsteğe bağlı not">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">İptal</button>
+                <button class="btn btn-danger" id="deleteBtn" style="display:none" onclick="deleteAppointment()"><i class="bi bi-trash"></i> Sil</button>
+                <button class="btn btn-primary" id="saveBtn" onclick="saveAppointment()"><i class="bi bi-check-lg"></i> Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/theme.js"></script>
+    <script src="/assets/js/sidebar.js"></script>
+    <script src="/assets/js/notifications.js"></script>
+    <script>
+        // ═══ State ═══
+        let currentDate = new Date();
+        let experts = [];
+        let services = [];
+        let appointments = [];
+        let editingId = null;
+        const HOUR_HEIGHT = 60;
+        const START_HOUR = 8;
+        const END_HOUR = 22;
+
+        // ═══ Init ═══
+        const user = checkAuth();
+        if (user) {
+            renderSidebar('dashboard');
+            document.getElementById('headerDate').textContent = new Date().toLocaleDateString('tr-TR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+            init();
+        }
+
+        async function init() {
+            await loadExperts();
+            await loadServices();
+            renderCalendar();
+            await loadAppointments();
+            updateNowLine();
+            setInterval(updateNowLine, 60000);
+        }
+
+        // ═══ Data Loading ═══
+        async function loadExperts() {
+            const res = await api.get('/experts');
+            if (res?.success) {
+                experts = res.data.filter(e => e.is_active !== false);
+                renderExpertFilter();
+                populateExpertSelect();
+            }
+        }
+
+        async function loadServices() {
+            const res = await api.get('/services');
+            if (res?.success) {
+                services = res.data.filter(s => s.is_active !== false);
+                populateServiceSelect();
+            }
+        }
+
+        async function loadAppointments() {
+            const dateStr = formatDate(currentDate);
+            const res = await api.get(`/appointments?start=${dateStr}T00:00:00&end=${dateStr}T23:59:59`);
+            if (res?.success) {
+                appointments = res.data;
+                renderAppointments();
+                renderSummary();
+            }
+        }
+
+        // ═══ Calendar Rendering ═══
+        function renderCalendar() {
+            const container = document.getElementById('calendarContainer');
+            let html = '';
+
+            // Time column
+            html += '<div class="time-column">';
+            for (let h = START_HOUR; h < END_HOUR; h++) {
+                html += `<div class="time-slot">${String(h).padStart(2,'0')}:00</div>`;
+            }
+            html += '</div>';
+
+            // Expert columns
+            const visibleExperts = experts.length ? experts : [{ id: 0, oda_adi: 'Genel', renk: '#7C6FE7' }];
+            visibleExperts.forEach(exp => {
+                html += `<div class="expert-column" data-expert-id="${exp.id}">
+                    <div class="expert-header">
+                        <div class="expert-name" style="color:${exp.renk || '#7C6FE7'}">${exp.oda_adi}</div>
+                        <div class="expert-spec">${exp.uzmanlik || ''}</div>
+                    </div>
+                    <div class="expert-slots" data-expert="${exp.oda_adi}" data-expert-id="${exp.id}">`;
+                for (let h = START_HOUR; h < END_HOUR; h++) {
+                    html += `<div class="slot-row" data-hour="${h}" data-expert="${exp.oda_adi}" data-expert-id="${exp.id}" onclick="slotClick(this)"></div>`;
+                }
+                html += '</div></div>';
+            });
+
+            container.innerHTML = html;
+            updateDateDisplay();
+        }
+
+        function renderAppointments() {
+            // Önceki kartları temizle
+            document.querySelectorAll('.appt-card').forEach(c => c.remove());
+            document.querySelectorAll('.now-line').forEach(c => c.remove());
+
+            appointments.forEach(appt => {
+                const start = new Date(appt.baslangic_saati);
+                const end = new Date(appt.bitis_saati);
+                const startMin = start.getHours() * 60 + start.getMinutes();
+                const endMin = end.getHours() * 60 + end.getMinutes();
+                const top = (startMin - START_HOUR * 60) * (HOUR_HEIGHT / 60);
+                const height = Math.max((endMin - startMin) * (HOUR_HEIGHT / 60), 20);
+
+                // Uzmanın kolonunu bul
+                let expertSlots = document.querySelector(`.expert-slots[data-expert="${appt.uzman}"]`);
+                if (!expertSlots) expertSlots = document.querySelector('.expert-slots');
+                if (!expertSlots) return;
+
+                const expert = experts.find(e => e.oda_adi === appt.uzman);
+                const color = expert?.renk || '#7C6FE7';
+
+                const statusColors = { bekliyor:'var(--yellow)', onaylandi:'var(--blue)', tamamlandi:'var(--green)', iptal:'var(--red)', gelmedi:'var(--text-muted)' };
+                const statusColor = statusColors[appt.durum] || statusColors.bekliyor;
+
+                const timeStr = `${String(start.getHours()).padStart(2,'0')}:${String(start.getMinutes()).padStart(2,'0')} - ${String(end.getHours()).padStart(2,'0')}:${String(end.getMinutes()).padStart(2,'0')}`;
+
+                const card = document.createElement('div');
+                card.className = 'appt-card';
+                card.style.cssText = `top:${top}px;height:${height}px;border-left-color:${color};background:${color}18;`;
+                card.onclick = () => editAppointment(appt);
+                card.innerHTML = `
+                    <div class="appt-name" style="color:${color}">${appt.musteri_adi}</div>
+                    <div class="appt-time">${timeStr}</div>
+                    ${height > 40 ? `<div class="appt-service">${appt.islem_turu || ''}</div>` : ''}
+                    <div class="appt-status"><span class="status-dot" style="background:${statusColor}"></span></div>
+                `;
+                expertSlots.appendChild(card);
+            });
+        }
+
+        function renderSummary() {
+            const total = appointments.length;
+            const completed = appointments.filter(a => a.durum === 'tamamlandi').length;
+            const pending = appointments.filter(a => a.durum === 'bekliyor' || a.durum === 'onaylandi').length;
+            const cancelled = appointments.filter(a => a.durum === 'iptal').length;
+            const revenue = appointments.filter(a => a.durum !== 'iptal').reduce((s, a) => s + (parseFloat(a.odeme_tutari) || 0), 0);
+
+            document.getElementById('summaryBar').innerHTML = `
+                <div class="sum-item">Toplam: <strong>${total}</strong></div>
+                <div class="sum-item">Bekleyen: <strong style="color:var(--yellow)">${pending}</strong></div>
+                <div class="sum-item">Tamamlanan: <strong style="color:var(--green)">${completed}</strong></div>
+                <div class="sum-item">İptal: <strong style="color:var(--red)">${cancelled}</strong></div>
+                <div class="sum-item" style="margin-left:auto">Tahmini Ciro: <strong style="color:var(--primary)">₺${revenue.toLocaleString('tr-TR')}</strong></div>
+            `;
+        }
+
+        function renderExpertFilter() {
+            const el = document.getElementById('expertFilter');
+            el.innerHTML = experts.map(e =>
+                `<div class="expert-chip active" style="background:${e.renk}22;color:${e.renk}" data-id="${e.id}" onclick="toggleExpert(this)">${e.oda_adi}</div>`
+            ).join('');
+        }
+
+        // ═══ Date Navigation ═══
+        function changeDate(delta) {
+            currentDate.setDate(currentDate.getDate() + delta);
+            updateDateDisplay();
+            loadAppointments();
+        }
+
+        function goToday() {
+            currentDate = new Date();
+            updateDateDisplay();
+            loadAppointments();
+        }
+
+        function updateDateDisplay() {
+            const days = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+            const months = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+            document.getElementById('dateDisplay').textContent = `${currentDate.getDate()} ${months[currentDate.getMonth()]} ${currentDate.getFullYear()}, ${days[currentDate.getDay()]}`;
+        }
+
+        function formatDate(d) {
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        }
+
+        // ═══ Now Line ═══
+        function updateNowLine() {
+            document.querySelectorAll('.now-line').forEach(l => l.remove());
+            const now = new Date();
+            if (formatDate(now) !== formatDate(currentDate)) return;
+            const min = now.getHours() * 60 + now.getMinutes();
+            const top = (min - START_HOUR * 60) * (HOUR_HEIGHT / 60);
+            if (top < 0) return;
+
+            document.querySelectorAll('.expert-slots').forEach(col => {
+                const line = document.createElement('div');
+                line.className = 'now-line';
+                line.style.top = top + 'px';
+                col.appendChild(line);
+            });
+        }
+
+        // ═══ Expert Filter ═══
+        function toggleExpert(chip) {
+            chip.classList.toggle('active');
+            const id = chip.dataset.id;
+            const col = document.querySelector(`.expert-column[data-expert-id="${id}"]`);
+            if (col) col.style.display = chip.classList.contains('active') ? '' : 'none';
+        }
+
+        // ═══ Modal ═══
+        function populateExpertSelect() {
+            const sel = document.getElementById('mExpert');
+            sel.innerHTML = '<option value="">Seçiniz</option>' + experts.map(e => `<option value="${e.oda_adi}" data-id="${e.id}">${e.oda_adi}</option>`).join('');
+        }
+
+        function populateServiceSelect() {
+            const sel = document.getElementById('mService');
+            sel.innerHTML = '<option value="">Seçiniz</option>' + services.map(s => `<option value="${s.id}" data-duration="${s.sure_dakika}" data-price="${s.fiyat}">${s.hizmet_adi} (${s.sure_dakika}dk — ₺${s.fiyat})</option>`).join('');
+
+            // Hizmet seçildiğinde süreyi otomatik ayarla
+            sel.onchange = () => {
+                const opt = sel.selectedOptions[0];
+                if (opt?.dataset.duration) {
+                    const startVal = document.getElementById('mStart').value;
+                    if (startVal) {
+                        const [h, m] = startVal.split(':').map(Number);
+                        const endMin = h * 60 + m + parseInt(opt.dataset.duration);
+                        document.getElementById('mEnd').value = `${String(Math.floor(endMin/60)).padStart(2,'0')}:${String(endMin%60).padStart(2,'0')}`;
+                    }
+                }
+            };
+        }
+
+        function slotClick(slot) {
+            editingId = null;
+            document.getElementById('modalTitle').textContent = 'Yeni Randevu';
+            document.getElementById('deleteBtn').style.display = 'none';
+            document.getElementById('mCustomer').value = '';
+            document.getElementById('mPhone').value = '';
+            document.getElementById('mNotes').value = '';
+
+            const hour = slot.dataset.hour;
+            document.getElementById('mStart').value = `${String(hour).padStart(2,'0')}:00`;
+            document.getElementById('mEnd').value = `${String(parseInt(hour)+1).padStart(2,'0')}:00`;
+
+            const expertName = slot.dataset.expert;
+            document.getElementById('mExpert').value = expertName || '';
+
+            document.getElementById('apptModal').classList.add('show');
+            document.getElementById('mCustomer').focus();
+        }
+
+        function openNewAppointment() {
+            editingId = null;
+            document.getElementById('modalTitle').textContent = 'Yeni Randevu';
+            document.getElementById('deleteBtn').style.display = 'none';
+            ['mCustomer','mPhone','mStart','mEnd','mNotes'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('mExpert').value = '';
+            document.getElementById('mService').value = '';
+            document.getElementById('apptModal').classList.add('show');
+            document.getElementById('mCustomer').focus();
+        }
+
+        function editAppointment(appt) {
+            editingId = appt.id;
+            document.getElementById('modalTitle').textContent = 'Randevu Düzenle';
+            document.getElementById('deleteBtn').style.display = 'inline-flex';
+            document.getElementById('mCustomer').value = appt.musteri_adi || '';
+            document.getElementById('mPhone').value = appt.telefon_no || '';
+            document.getElementById('mExpert').value = appt.uzman || '';
+            document.getElementById('mNotes').value = appt.notlar || '';
+
+            if (appt.hizmet_id) document.getElementById('mService').value = appt.hizmet_id;
+
+            const start = new Date(appt.baslangic_saati);
+            const end = new Date(appt.bitis_saati);
+            document.getElementById('mStart').value = `${String(start.getHours()).padStart(2,'0')}:${String(start.getMinutes()).padStart(2,'0')}`;
+            document.getElementById('mEnd').value = `${String(end.getHours()).padStart(2,'0')}:${String(end.getMinutes()).padStart(2,'0')}`;
+
+            document.getElementById('apptModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('apptModal').classList.remove('show');
+            editingId = null;
+        }
+
+        async function saveAppointment() {
+            const dateStr = formatDate(currentDate);
+            const expertSel = document.getElementById('mExpert');
+            const serviceSel = document.getElementById('mService');
+            const serviceOpt = serviceSel.selectedOptions[0];
+
+            const body = {
+                musteri_adi: document.getElementById('mCustomer').value.trim(),
+                telefon_no: document.getElementById('mPhone').value.trim() || null,
+                uzman: expertSel.value || null,
+                uzman_id: expertSel.selectedOptions[0]?.dataset?.id || null,
+                hizmet_id: serviceSel.value || null,
+                islem_turu: serviceOpt?.text?.split('(')[0]?.trim() || null,
+                baslangic_saati: `${dateStr}T${document.getElementById('mStart').value}:00`,
+                bitis_saati: `${dateStr}T${document.getElementById('mEnd').value}:00`,
+                odeme_tutari: serviceOpt?.dataset?.price || null,
+                notlar: document.getElementById('mNotes').value.trim() || null
+            };
+
+            if (!body.musteri_adi) { showToast('Müşteri adı gerekli', 'error'); return; }
+            if (!document.getElementById('mStart').value) { showToast('Başlangıç saati gerekli', 'error'); return; }
+
+            let res;
+            if (editingId) {
+                res = await api.put(`/appointments/${editingId}`, body);
+            } else {
+                res = await api.post('/appointments', body);
+            }
+
+            if (res?.success) {
+                showToast(editingId ? 'Randevu güncellendi' : 'Randevu oluşturuldu', 'success');
+                closeModal();
+                await loadAppointments();
+            } else {
+                showToast(res?.message || 'Hata oluştu', 'error');
+            }
+        }
+
+        async function deleteAppointment() {
+            if (!editingId) return;
+            if (!confirm('Bu randevuyu silmek istediğinize emin misiniz?')) return;
+
+            const res = await api.del(`/appointments/${editingId}`);
+            if (res?.success) {
+                showToast('Randevu silindi', 'success');
+                closeModal();
+                await loadAppointments();
+            } else {
+                showToast('Silinemedi', 'error');
+            }
+        }
+
+        // ESC ile modal kapat
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+        document.getElementById('apptModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+    </script>
+</body>
+</html>
