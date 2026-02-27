@@ -24,6 +24,9 @@ app.use('/api/appointments', require('./routes/appointment.routes'));
 // Hizmetler
 app.use('/api/services', require('./routes/service.routes'));
 
+// Süper Admin
+app.use('/api/admin', require('./routes/admin.routes'));
+
 // Legacy uyumluluk (eski frontend /api/appointments/uzmanlar kullanıyor)
 const { auth: authMw } = require('./middleware/auth');
 const appointmentCtrl = require('./controllers/appointment.controller');

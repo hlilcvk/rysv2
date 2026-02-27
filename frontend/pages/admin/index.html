@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="midnight">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Süper Admin — RandevuCRM</title>
+    <link rel="stylesheet" href="/assets/css/themes.css">
+    <link rel="stylesheet" href="/assets/css/base.css">
+    <style>
+        .admin-layout { display:flex; min-height:100vh; }
+        .admin-sidebar { width:220px; background:var(--bg-sidebar); border-right:1px solid var(--border); position:fixed; height:100vh; display:flex; flex-direction:column; }
+        .admin-logo { padding:20px 18px 16px; border-bottom:1px solid var(--border); }
+        .admin-logo h2 { font-size:16px; font-weight:800; color:var(--primary); }
+        .admin-logo span { font-size:10px; color:var(--text-muted); }
+        .admin-nav { flex:1; padding:12px 10px; overflow-y:auto; }
+        .admin-nav-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; color:var(--text-secondary); font-size:13px; font-weight:500; cursor:pointer; margin-bottom:2px; transition:all 0.15s; }
+        .admin-nav-item:hover { background:var(--bg-hover); color:var(--text-primary); }
+        .admin-nav-item.active { background:var(--primary-alpha); color:var(--primary); font-weight:700; }
+        .admin-nav-section { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); padding:12px 10px 6px; }
+        .admin-footer { padding:12px 14px; border-top:1px solid var(--border); }
+        .admin-footer-user { display:flex; align-items:center; gap:8px; padding:8px; border-radius:8px; cursor:pointer; font-size:12px; color:var(--text-secondary); }
+        .admin-footer-user:hover { background:var(--bg-hover); }
+
+        .admin-main { flex:1; margin-left:220px; }
+        .admin-header { display:flex; align-items:center; justify-content:space-between; padding:14px 24px; border-bottom:1px solid var(--border); background:var(--bg-card); position:sticky; top:0; z-index:50; }
+        .admin-header h1 { font-size:16px; font-weight:700; }
+        .admin-body { padding:24px; }
+
+        /* Stats Cards */
+        .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-bottom:24px; }
+        .stat-card { background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:18px; }
+        .stat-label { font-size:11px; color:var(--text-tertiary); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+        .stat-value { font-size:28px; font-weight:800; margin-top:4px; font-family:'Segoe UI',system-ui,sans-serif; }
+        .stat-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
+        .stat-green .stat-value { color:var(--green); }
+        .stat-blue .stat-value { color:var(--primary); }
+        .stat-yellow .stat-value { color:var(--yellow); }
+        .stat-red .stat-value { color:var(--red); }
+
+        /* Table */
+        .admin-table { width:100%; border-collapse:collapse; font-size:13px; }
+        .admin-table th { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-tertiary); padding:10px 12px; text-align:left; border-bottom:1px solid var(--border); }
+        .admin-table td { padding:10px 12px; border-bottom:1px solid var(--border); }
+        .admin-table tr:hover td { background:var(--bg-hover); }
+
+        /* Badges */
+        .badge { padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; }
+        .badge-green { background:var(--green-alpha); color:var(--green); }
+        .badge-yellow { background:var(--yellow-alpha); color:var(--yellow); }
+        .badge-red { background:var(--red-alpha); color:var(--red); }
+        .badge-blue { background:var(--blue-alpha); color:var(--primary); }
+
+        /* Toggle */
+        .toggle { position:relative; width:36px; height:20px; cursor:pointer; }
+        .toggle input { display:none; }
+        .toggle span { position:absolute; inset:0; background:var(--bg-input); border:1px solid var(--border); border-radius:10px; transition:0.2s; }
+        .toggle span::before { content:''; position:absolute; width:14px; height:14px; border-radius:50%; background:var(--text-muted); top:2px; left:2px; transition:0.2s; }
+        .toggle input:checked + span { background:var(--primary); border-color:var(--primary); }
+        .toggle input:checked + span::before { transform:translateX(16px); background:#fff; }
+
+        /* Action buttons */
+        .actions { display:flex; gap:4px; }
+        .actions button { background:none; border:none; padding:4px 6px; border-radius:4px; cursor:pointer; font-size:14px; color:var(--text-muted); }
+        .actions button:hover { background:var(--bg-hover); color:var(--text-primary); }
+
+        /* Tab content */
+        .tab-content { display:none; }
+        .tab-content.active { display:block; }
+
+        /* Toolbar */
+        .toolbar { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+        .search-input { padding:7px 12px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; color:var(--text-primary); font-size:13px; outline:none; width:240px; font-family:inherit; }
+        .search-input:focus { border-color:var(--primary); }
+
+        /* Form */
+        .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+        .form-group { margin-bottom:12px; }
+        .form-label { display:block; font-size:11px; font-weight:700; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px; }
+        .form-input { width:100%; padding:8px 12px; background:var(--bg-input); border:1px solid var(--border); border-radius:8px; color:var(--text-primary); font-size:13px; outline:none; font-family:inherit; }
+        .form-input:focus { border-color:var(--primary); }
+        textarea.form-input { resize:vertical; min-height:80px; font-family:'Courier New',monospace; }
+
+        /* Modal */
+        .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:1000; backdrop-filter:blur(4px); }
+        .modal-overlay.show { display:flex; }
+        .modal { background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:28px; width:520px; max-width:90vw; max-height:90vh; overflow-y:auto; }
+        .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+        .modal-title { font-size:18px; font-weight:700; }
+        .modal-close { background:none; border:none; color:var(--text-tertiary); font-size:20px; cursor:pointer; padding:4px 8px; }
+        .modal-footer { display:flex; justify-content:flex-end; gap:8px; margin-top:20px; padding-top:16px; border-top:1px solid var(--border); }
+
+        /* DB Section */
+        .db-info-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin-bottom:16px; }
+        .db-info-item { background:var(--bg-input); border-radius:8px; padding:12px; text-align:center; }
+        .db-info-label { font-size:10px; color:var(--text-muted); }
+        .db-info-value { font-size:16px; font-weight:700; margin-top:2px; }
+
+        .tenant-table-row { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-bottom:1px solid var(--border); font-size:12px; }
+        .tenant-table-row:hover { background:var(--bg-hover); }
+        .tenant-health { display:flex; align-items:center; gap:6px; }
+        .health-dot { width:8px; height:8px; border-radius:50%; }
+
+        /* Toast */
+        .toast-container { position:fixed; top:16px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:8px; }
+        .toast { padding:10px 16px; border-radius:8px; font-size:13px; font-weight:500; min-width:280px; display:flex; align-items:center; gap:8px; box-shadow:0 4px 20px rgba(0,0,0,0.3); animation:toastIn 0.3s ease; }
+        @keyframes toastIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+        .toast.success { background:var(--green); color:#fff; }
+        .toast.error { background:var(--red); color:#fff; }
+    </style>
+</head>
+<body>
+<div class="admin-layout">
+    <!-- Sidebar -->
+    <div class="admin-sidebar">
+        <div class="admin-logo">
+            <h2>🛡 Süper Admin</h2>
+            <span>RandevuCRM v2.0</span>
+        </div>
+        <nav class="admin-nav">
+            <div class="admin-nav-section">GENEL</div>
+            <div class="admin-nav-item active" data-tab="overview" onclick="switchTab('overview',this)">📊 Genel Bakış</div>
+            <div class="admin-nav-item" data-tab="businesses" onclick="switchTab('businesses',this)">🏢 İşletmeler</div>
+            <div class="admin-nav-item" data-tab="subscriptions" onclick="switchTab('subscriptions',this)">📦 Abonelikler</div>
+            <div class="admin-nav-section">FİNANS</div>
+            <div class="admin-nav-item" data-tab="finance" onclick="switchTab('finance',this)">💰 Platform Gelir</div>
+            <div class="admin-nav-item" data-tab="coupons" onclick="switchTab('coupons',this)">🎫 Kuponlar</div>
+            <div class="admin-nav-section">SİSTEM</div>
+            <div class="admin-nav-item" data-tab="database" onclick="switchTab('database',this)">🗄 Veritabanı</div>
+            <div class="admin-nav-item" data-tab="settings" onclick="switchTab('settings',this)">⚙️ Ayarlar</div>
+        </nav>
+        <div class="admin-footer">
+            <div class="admin-footer-user" onclick="logout()">🔓 Çıkış Yap</div>
+        </div>
+    </div>
+
+    <!-- Main -->
+    <div class="admin-main">
+        <div class="admin-header">
+            <h1 id="pageTitle">Genel Bakış</h1>
+            <div class="theme-dots">
+                <div class="theme-dot" data-theme="midnight" title="Midnight"></div>
+                <div class="theme-dot" data-theme="pastel" title="Pastel"></div>
+                <div class="theme-dot" data-theme="ocean" title="Ocean"></div>
+                <div class="theme-dot" data-theme="light" title="Light"></div>
+            </div>
+        </div>
+        <div class="admin-body">
+
+            <!-- ═══ GENEL BAKIŞ ═══ -->
+            <div class="tab-content active" id="tab-overview">
+                <div class="stats-grid" id="overviewStats"></div>
+                <div class="card" style="margin-bottom:16px">
+                    <h3 style="font-size:14px;font-weight:700;margin-bottom:12px">Son Kaydolan İşletmeler</h3>
+                    <table class="admin-table" id="recentBusinesses"><thead><tr><th>İşletme</th><th>Sahip</th><th>Kayıt</th><th>Paket</th><th>Durum</th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+
+            <!-- ═══ İŞLETMELER ═══ -->
+            <div class="tab-content" id="tab-businesses">
+                <div class="toolbar">
+                    <input type="text" class="search-input" placeholder="İşletme ara..." id="bizSearch" oninput="filterBusinesses()">
+                    <button class="btn btn-primary" onclick="openBizModal()">+ Yeni İşletme</button>
+                </div>
+                <div class="card">
+                    <table class="admin-table" id="bizTable"><thead><tr><th>İşletme ID</th><th>Sahip</th><th>Paket</th><th>Uzman</th><th>Son Giriş</th><th>Durum</th><th>İşlem</th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+
+            <!-- ═══ ABONELİKLER ═══ -->
+            <div class="tab-content" id="tab-subscriptions">
+                <div class="card">
+                    <table class="admin-table" id="subTable"><thead><tr><th>İşletme</th><th>Paket</th><th>Durum</th><th>Başlangıç</th><th>Bitiş</th><th>İşlem</th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+
+            <!-- ═══ FİNANS ═══ -->
+            <div class="tab-content" id="tab-finance">
+                <div class="stats-grid" id="financeStats"></div>
+                <div class="card">
+                    <h3 style="font-size:14px;font-weight:700;margin-bottom:12px">Son Ödemeler</h3>
+                    <table class="admin-table" id="paymentTable"><thead><tr><th>İşletme</th><th>Tutar</th><th>Tür</th><th>Tarih</th><th>Durum</th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+
+            <!-- ═══ KUPONLAR ═══ -->
+            <div class="tab-content" id="tab-coupons">
+                <div class="toolbar">
+                    <button class="btn btn-primary" onclick="openCouponModal()">+ Yeni Kupon</button>
+                </div>
+                <div class="card">
+                    <table class="admin-table" id="couponTable"><thead><tr><th>Kod</th><th>İndirim</th><th>Kullanım</th><th>Geçerlilik</th><th>Durum</th><th>İşlem</th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+
+            <!-- ═══ VERİTABANI ═══ -->
+            <div class="tab-content" id="tab-database">
+                <div class="db-info-grid" id="dbInfoGrid"></div>
+                <div class="card" style="margin-bottom:16px">
+                    <h3 style="font-size:14px;font-weight:700;margin-bottom:12px">İşletme Tabloları</h3>
+                    <div id="dbTenantList"></div>
+                </div>
+                <div class="card" style="margin-bottom:16px">
+                    <h3 style="font-size:14px;font-weight:700;margin-bottom:12px">Migration Geçmişi</h3>
+                    <table class="admin-table" id="migrationTable"><thead><tr><th>Migration</th><th>Tür</th><th>Hedef</th><th>Durum</th><th>Tarih</th></tr></thead><tbody></tbody></table>
+                </div>
+                <div class="card">
+                    <h3 style="font-size:14px;font-weight:700;margin-bottom:12px">Özel SQL Çalıştır</h3>
+                    <div class="form-group">
+                        <label class="form-label">Hedef</label>
+                        <select class="form-input" id="sqlTarget" style="width:auto">
+                            <option value="ortak">Ortak Tablolar</option>
+                            <option value="tum">Tüm İşletmeler</option>
+                            <option value="tek">Tek İşletme</option>
+                        </select>
+                        <input type="text" class="form-input" id="sqlTargetBiz" placeholder="isletme_id" style="width:180px;display:none;margin-top:6px">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Migration Adı</label>
+                        <input type="text" class="form-input" id="sqlMigName" placeholder="add_column_xyz">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">SQL</label>
+                        <textarea class="form-input" id="sqlInput" rows="4" placeholder="ALTER TABLE {isletme_id}_randevular ADD COLUMN ..."></textarea>
+                    </div>
+                    <button class="btn btn-primary" onclick="runCustomSQL()">▶ Çalıştır</button>
+                </div>
+            </div>
+
+            <!-- ═══ AYARLAR ═══ -->
+            <div class="tab-content" id="tab-settings">
+                <div class="card">
+                    <div id="settingsForm"></div>
+                    <button class="btn btn-primary" onclick="saveSettings()" style="margin-top:12px">Kaydet</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- İşletme Modal -->
+<div class="modal-overlay" id="bizModal">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title" id="bizModalTitle">Yeni İşletme</div>
+            <button class="modal-close" onclick="closeBizModal()">&times;</button>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">İşletme ID *</label><input type="text" class="form-input" id="bizId" placeholder="beautystudio"></div>
+            <div class="form-group"><label class="form-label">Kullanıcı Adı *</label><input type="text" class="form-input" id="bizUser" placeholder="beautystudio_admin"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">Ad Soyad *</label><input type="text" class="form-input" id="bizName" placeholder="Ayşe Yılmaz"></div>
+            <div class="form-group"><label class="form-label">Şifre *</label><input type="password" class="form-input" id="bizPass" placeholder="En az 6 karakter"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="bizEmail"></div>
+            <div class="form-group"><label class="form-label">Telefon</label><input type="tel" class="form-input" id="bizPhone"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeBizModal()">İptal</button>
+            <button class="btn btn-primary" onclick="saveBusiness()">Kaydet</button>
+        </div>
+    </div>
+</div>
+
+<!-- Kupon Modal -->
+<div class="modal-overlay" id="couponModal">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title">Yeni Kupon</div>
+            <button class="modal-close" onclick="closeCouponModal()">&times;</button>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">Kupon Kodu *</label><input type="text" class="form-input" id="cpnCode" placeholder="HOSGELDIN50" style="text-transform:uppercase"></div>
+            <div class="form-group"><label class="form-label">İndirim Değeri *</label><input type="number" class="form-input" id="cpnValue" placeholder="50"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">İndirim Tipi</label><select class="form-input" id="cpnType"><option value="yuzde">Yüzde (%)</option><option value="tutar">Sabit Tutar (₺)</option></select></div>
+            <div class="form-group"><label class="form-label">Max Kullanım</label><input type="number" class="form-input" id="cpnMax" placeholder="100"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">Başlangıç</label><input type="date" class="form-input" id="cpnStart"></div>
+            <div class="form-group"><label class="form-label">Bitiş</label><input type="date" class="form-input" id="cpnEnd"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Açıklama</label><input type="text" class="form-input" id="cpnDesc" placeholder="Hoşgeldin indirimi"></div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeCouponModal()">İptal</button>
+            <button class="btn btn-primary" onclick="saveCoupon()">Kaydet</button>
+        </div>
+    </div>
+</div>
+
+<!-- Hediye Modal -->
+<div class="modal-overlay" id="giftModal">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title">Hediye Abonelik</div>
+            <button class="modal-close" onclick="closeGiftModal()">&times;</button>
+        </div>
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px" id="giftTarget"></p>
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">Süre (Gün)</label><input type="number" class="form-input" id="giftDays" value="30"></div>
+            <div class="form-group"><label class="form-label">Neden</label><input type="text" class="form-input" id="giftReason" placeholder="Hediye abonelik"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeGiftModal()">İptal</button>
+            <button class="btn btn-primary" onclick="saveGift()">🎁 Hediye Ver</button>
+        </div>
+    </div>
+</div>
+
+<script src="/assets/js/api.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/theme.js"></script>
+<script>
+// ═══ Auth Check ═══
+const user = checkAuth();
+if (!user || !user.is_super_admin) { window.location.href = '/pages/auth/login.html'; }
+
+let businesses = [], subscriptions = [], coupons = [];
+let editBizId = null, giftIsletmeId = null;
+
+// ═══ Tab Navigation ═══
+function switchTab(tab, el) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.admin-nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    if (el) el.classList.add('active');
+    const titles = {overview:'Genel Bakış',businesses:'İşletmeler',subscriptions:'Abonelikler',finance:'Platform Gelir',coupons:'Kuponlar',database:'Veritabanı',settings:'Ayarlar'};
+    document.getElementById('pageTitle').textContent = titles[tab] || tab;
+    loadTabData(tab);
+}
+
+async function loadTabData(tab) {
+    if (tab === 'overview') await loadOverview();
+    if (tab === 'businesses') await loadBusinesses();
+    if (tab === 'subscriptions') await loadSubscriptions();
+    if (tab === 'finance') await loadFinance();
+    if (tab === 'coupons') await loadCoupons();
+    if (tab === 'database') await loadDatabase();
+    if (tab === 'settings') await loadSettings();
+}
+
+// ═══ Toast ═══
+function showToast(msg, type='success') {
+    let c = document.getElementById('toastContainer');
+    if (!c) { c = document.createElement('div'); c.id='toastContainer'; c.className='toast-container'; document.body.appendChild(c); }
+    const t = document.createElement('div'); t.className=`toast ${type}`; t.textContent=msg; c.appendChild(t);
+    setTimeout(() => { t.style.opacity='0'; setTimeout(() => t.remove(), 300); }, 3000);
+}
+
+// ═══ GENEL BAKIŞ ═══
+async function loadOverview() {
+    const [fin, biz] = await Promise.all([api.get('/admin/finance/summary'), api.get('/admin/businesses')]);
+    if (fin?.success) {
+        const d = fin.data;
+        document.getElementById('overviewStats').innerHTML = `
+            <div class="stat-card stat-blue"><div class="stat-label">Toplam İşletme</div><div class="stat-value">${d.toplam_isletme}</div></div>
+            <div class="stat-card stat-green"><div class="stat-label">Aktif Abonelik</div><div class="stat-value">${d.aktif_abonelik}</div></div>
+            <div class="stat-card stat-yellow"><div class="stat-label">Aylık Gelir</div><div class="stat-value">₺${d.aylik_gelir.toLocaleString('tr-TR')}</div></div>
+            <div class="stat-card"><div class="stat-label">Toplam Gelir</div><div class="stat-value">₺${d.toplam_gelir.toLocaleString('tr-TR')}</div></div>
+        `;
+    }
+    if (biz?.success) {
+        const tbody = document.querySelector('#recentBusinesses tbody');
+        tbody.innerHTML = biz.data.slice(0, 5).map(b => `<tr>
+            <td><strong>${b.isletme_id}</strong></td>
+            <td>${b.ad_soyad}</td>
+            <td>${new Date(b.created_at).toLocaleDateString('tr-TR')}</td>
+            <td>${b.paket_adi || '-'}</td>
+            <td>${statusBadge(b.abo_durum)}</td>
+        </tr>`).join('');
+    }
+}
+
+// ═══ İŞLETMELER ═══
+async function loadBusinesses() {
+    const res = await api.get('/admin/businesses');
+    if (!res?.success) return;
+    businesses = res.data;
+    renderBusinesses(businesses);
+}
+
+function renderBusinesses(list) {
+    document.querySelector('#bizTable tbody').innerHTML = list.map(b => `<tr>
+        <td><strong>${b.isletme_id}</strong></td>
+        <td>${b.ad_soyad}<br><span style="font-size:10px;color:var(--text-muted)">${b.kullanici_adi}</span></td>
+        <td>${statusBadge(b.abo_durum)}<br><span style="font-size:10px">${b.paket_adi || '-'}</span></td>
+        <td>${b.uzman_sayisi || 0}</td>
+        <td style="font-size:11px">${b.son_giris ? new Date(b.son_giris).toLocaleDateString('tr-TR') : 'Hiç'}</td>
+        <td><label class="toggle"><input type="checkbox" ${b.is_active?'checked':''} onchange="toggleBiz(${b.id})"><span></span></label></td>
+        <td class="actions">
+            <button onclick="editBiz(${b.id})" title="Düzenle">✏️</button>
+            <button onclick="giftBiz('${b.isletme_id}','${b.ad_soyad}')" title="Hediye">🎁</button>
+            <button onclick="deleteBiz(${b.id},'${b.isletme_id}')" title="Sil">🗑</button>
+        </td>
+    </tr>`).join('');
+}
+
+function filterBusinesses() {
+    const q = document.getElementById('bizSearch').value.toLowerCase();
+    renderBusinesses(businesses.filter(b => b.isletme_id.includes(q) || b.ad_soyad.toLowerCase().includes(q)));
+}
+
+function openBizModal() { editBizId=null; document.getElementById('bizModalTitle').textContent='Yeni İşletme'; ['bizId','bizUser','bizName','bizPass','bizEmail','bizPhone'].forEach(id=>document.getElementById(id).value=''); document.getElementById('bizId').disabled=false; document.getElementById('bizModal').classList.add('show'); }
+function closeBizModal() { document.getElementById('bizModal').classList.remove('show'); }
+
+async function saveBusiness() {
+    const body = { isletme_id:document.getElementById('bizId').value.trim(), kullanici_adi:document.getElementById('bizUser').value.trim(), ad_soyad:document.getElementById('bizName').value.trim(), sifre:document.getElementById('bizPass').value, email:document.getElementById('bizEmail').value.trim(), telefon:document.getElementById('bizPhone').value.trim() };
+    if (!body.isletme_id||!body.kullanici_adi||!body.ad_soyad||!body.sifre) { showToast('Zorunlu alanları doldurun','error'); return; }
+    const res = editBizId ? await api.put(`/admin/businesses/${editBizId}`, body) : await api.post('/admin/businesses', body);
+    if (res?.success) { showToast(editBizId?'Güncellendi':'İşletme oluşturuldu'); closeBizModal(); loadBusinesses(); } else { showToast(res?.message||'Hata','error'); }
+}
+
+function editBiz(id) {
+    const b = businesses.find(x=>x.id===id); if (!b) return;
+    editBizId = id;
+    document.getElementById('bizModalTitle').textContent = 'İşletme Düzenle';
+    document.getElementById('bizId').value = b.isletme_id; document.getElementById('bizId').disabled = true;
+    document.getElementById('bizUser').value = b.kullanici_adi;
+    document.getElementById('bizName').value = b.ad_soyad;
+    document.getElementById('bizPass').value = '';
+    document.getElementById('bizEmail').value = b.email || '';
+    document.getElementById('bizPhone').value = b.telefon || '';
+    document.getElementById('bizModal').classList.add('show');
+}
+
+async function toggleBiz(id) { await api.put(`/admin/businesses/${id}/toggle`); }
+async function deleteBiz(id, name) { if (!confirm(`${name} işletmesini ve TÜM verilerini silmek istediğinize emin misiniz?`)) return; const res = await api.del(`/admin/businesses/${id}`); if (res?.success) { showToast('İşletme silindi'); loadBusinesses(); } else { showToast('Silinemedi','error'); } }
+
+function giftBiz(isletme_id, name) { giftIsletmeId=isletme_id; document.getElementById('giftTarget').textContent=`${name} (${isletme_id}) işletmesine hediye abonelik ver`; document.getElementById('giftModal').classList.add('show'); }
+function closeGiftModal() { document.getElementById('giftModal').classList.remove('show'); }
+async function saveGift() {
+    const res = await api.post(`/admin/subscriptions/${giftIsletmeId}/gift`, { sure_gun:parseInt(document.getElementById('giftDays').value), neden:document.getElementById('giftReason').value });
+    if (res?.success) { showToast('Hediye abonelik verildi'); closeGiftModal(); loadBusinesses(); } else { showToast('Hata','error'); }
+}
+
+// ═══ ABONELİKLER ═══
+async function loadSubscriptions() {
+    const res = await api.get('/admin/subscriptions');
+    if (!res?.success) return;
+    subscriptions = res.data;
+    document.querySelector('#subTable tbody').innerHTML = subscriptions.map(s => `<tr>
+        <td><strong>${s.isletme}</strong><br><span style="font-size:10px;color:var(--text-muted)">${s.ad_soyad}</span></td>
+        <td>${s.paket_adi}</td>
+        <td>${statusBadge(s.durum)}</td>
+        <td style="font-size:11px">${new Date(s.baslangic_tarihi).toLocaleDateString('tr-TR')}</td>
+        <td style="font-size:11px">${s.bitis_tarihi?new Date(s.bitis_tarihi).toLocaleDateString('tr-TR'):'-'}</td>
+        <td class="actions"><button onclick="giftBiz('${s.isletme}','${s.ad_soyad}')" title="Hediye">🎁</button></td>
+    </tr>`).join('');
+}
+
+// ═══ FİNANS ═══
+async function loadFinance() {
+    const [fin, pay] = await Promise.all([api.get('/admin/finance/summary'), api.get('/admin/finance/payments')]);
+    if (fin?.success) {
+        const d = fin.data;
+        document.getElementById('financeStats').innerHTML = `
+            <div class="stat-card stat-green"><div class="stat-label">Aylık Gelir</div><div class="stat-value">₺${d.aylik_gelir.toLocaleString('tr-TR')}</div></div>
+            <div class="stat-card stat-blue"><div class="stat-label">Toplam Gelir</div><div class="stat-value">₺${d.toplam_gelir.toLocaleString('tr-TR')}</div></div>
+            <div class="stat-card"><div class="stat-label">Aktif Abonelik</div><div class="stat-value">${d.aktif_abonelik}</div></div>
+            <div class="stat-card"><div class="stat-label">Paket Dağılımı</div><div class="stat-value" style="font-size:14px">${d.paket_dagilimi.map(p=>`${p.gorunen_adi}: ${p.c}`).join(', ')||'Yok'}</div></div>
+        `;
+    }
+    if (pay?.success) {
+        document.querySelector('#paymentTable tbody').innerHTML = pay.data.length ? pay.data.map(p => `<tr>
+            <td>${p.ad_soyad||p.isletme_id}</td>
+            <td><strong>₺${parseFloat(p.tutar).toLocaleString('tr-TR')}</strong></td>
+            <td>${p.odeme_turu||'-'}</td>
+            <td style="font-size:11px">${new Date(p.created_at).toLocaleDateString('tr-TR')}</td>
+            <td>${statusBadge(p.durum)}</td>
+        </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Henüz ödeme kaydı yok</td></tr>';
+    }
+}
+
+// ═══ KUPONLAR ═══
+async function loadCoupons() {
+    const res = await api.get('/admin/coupons');
+    if (!res?.success) return;
+    coupons = res.data;
+    document.querySelector('#couponTable tbody').innerHTML = coupons.length ? coupons.map(c => `<tr>
+        <td><strong>${c.kupon_kodu}</strong><br><span style="font-size:10px;color:var(--text-muted)">${c.aciklama||''}</span></td>
+        <td>${c.indirim_tipi==='yuzde'?`%${c.indirim_degeri}`:`₺${c.indirim_degeri}`}</td>
+        <td>${c.kullanim_sayisi}/${c.max_kullanim||'∞'}</td>
+        <td style="font-size:11px">${c.bitis_tarihi?new Date(c.bitis_tarihi).toLocaleDateString('tr-TR'):'Süresiz'}</td>
+        <td>${c.is_active?'<span class="badge badge-green">Aktif</span>':'<span class="badge badge-red">Pasif</span>'}</td>
+        <td class="actions"><button onclick="deleteCoupon(${c.id})">🗑</button></td>
+    </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Henüz kupon yok</td></tr>';
+}
+
+function openCouponModal() { ['cpnCode','cpnValue','cpnMax','cpnStart','cpnEnd','cpnDesc'].forEach(id=>document.getElementById(id).value=''); document.getElementById('couponModal').classList.add('show'); }
+function closeCouponModal() { document.getElementById('couponModal').classList.remove('show'); }
+async function saveCoupon() {
+    const body = { kupon_kodu:document.getElementById('cpnCode').value, indirim_tipi:document.getElementById('cpnType').value, indirim_degeri:parseFloat(document.getElementById('cpnValue').value), max_kullanim:parseInt(document.getElementById('cpnMax').value)||null, baslangic_tarihi:document.getElementById('cpnStart').value||null, bitis_tarihi:document.getElementById('cpnEnd').value||null, aciklama:document.getElementById('cpnDesc').value };
+    if (!body.kupon_kodu||!body.indirim_degeri) { showToast('Kod ve değer gerekli','error'); return; }
+    const res = await api.post('/admin/coupons', body);
+    if (res?.success) { showToast('Kupon oluşturuldu'); closeCouponModal(); loadCoupons(); } else { showToast(res?.message||'Hata','error'); }
+}
+async function deleteCoupon(id) { if (!confirm('Kuponu sil?')) return; const res = await api.del(`/admin/coupons/${id}`); if (res?.success) { showToast('Kupon silindi'); loadCoupons(); } }
+
+// ═══ VERİTABANI ═══
+async function loadDatabase() {
+    const [stats, tenants, migs] = await Promise.all([api.get('/admin/db/stats'), api.get('/admin/db/tenants'), api.get('/admin/db/migrations')]);
+    if (stats?.success) {
+        const d = stats.data;
+        document.getElementById('dbInfoGrid').innerHTML = `
+            <div class="db-info-item"><div class="db-info-label">DB Boyutu</div><div class="db-info-value">${d.db_size||'?'}</div></div>
+            <div class="db-info-item"><div class="db-info-label">Toplam Tablo</div><div class="db-info-value">${d.table_count||'?'}</div></div>
+            <div class="db-info-item"><div class="db-info-label">Bağlantı</div><div class="db-info-value">${d.pool?.total||0}/${d.pool?.max||20}</div></div>
+            <div class="db-info-item"><div class="db-info-label">Idle</div><div class="db-info-value">${d.pool?.idle||0}</div></div>
+        `;
+    }
+    if (tenants?.success) {
+        document.getElementById('dbTenantList').innerHTML = tenants.data.map(t => `
+            <div class="tenant-table-row">
+                <div class="tenant-health">
+                    <div class="health-dot" style="background:${t.healthy?'var(--green)':'var(--red)'}"></div>
+                    <strong>${t.isletme_id}</strong>
+                    <span style="font-size:11px;color:var(--text-muted)">${t.ad_soyad}</span>
+                </div>
+                <span style="font-size:11px">${t.tables_ok}/${t.tables_total} tablo | ${t.total_rows} kayıt</span>
+                <div class="actions">
+                    ${!t.healthy?`<button onclick="repairTenant('${t.isletme_id}')" title="Onar">🔧</button>`:''}
+                    <button onclick="viewTenantTables('${t.isletme_id}')" title="Detay">📋</button>
+                </div>
+            </div>
+        `).join('');
+    }
+    if (migs?.success) {
+        document.querySelector('#migrationTable tbody').innerHTML = migs.data.slice(0,10).map(m => `<tr>
+            <td>${m.migration_adi}</td><td>${m.migration_tipi}</td><td>${m.hedef||'Ortak'}</td>
+            <td>${m.durum==='basarili'?'<span class="badge badge-green">OK</span>':'<span class="badge badge-red">HATA</span>'}</td>
+            <td style="font-size:11px">${new Date(m.created_at).toLocaleDateString('tr-TR')}</td>
+        </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Henüz migration yok</td></tr>';
+    }
+
+    // SQL hedef değişikliği
+    document.getElementById('sqlTarget').onchange = () => {
+        document.getElementById('sqlTargetBiz').style.display = document.getElementById('sqlTarget').value==='tek'?'block':'none';
+    };
+}
+
+async function repairTenant(id) {
+    const res = await api.post(`/admin/db/tenants/${id}/repair`);
+    if (res?.success) { showToast(`${res.data.repaired} tablo onarıldı`); loadDatabase(); } else { showToast('Onarım hatası','error'); }
+}
+
+async function viewTenantTables(id) {
+    const res = await api.get(`/admin/db/tenants/${id}/tables`);
+    if (res?.success) {
+        const detail = res.data.map(t => `${t.exists?'✅':'❌'} ${t.suffix} — ${t.rows} kayıt (${t.size})`).join('\n');
+        alert(`${id} Tabloları:\n\n${detail}`);
+    }
+}
+
+async function runCustomSQL() {
+    const body = { sql:document.getElementById('sqlInput').value, migration_adi:document.getElementById('sqlMigName').value, hedef:document.getElementById('sqlTarget').value, isletme_id:document.getElementById('sqlTargetBiz').value };
+    if (!body.sql||!body.migration_adi) { showToast('SQL ve migration adı gerekli','error'); return; }
+    if (!confirm('SQL çalıştırmak istediğinize emin misiniz?')) return;
+    const res = await api.post('/admin/db/migrations/custom', body);
+    if (res?.success) { showToast('Migration çalıştırıldı'); loadDatabase(); } else { showToast(res?.message||'Hata','error'); }
+}
+
+// ═══ AYARLAR ═══
+async function loadSettings() {
+    const res = await api.get('/admin/settings');
+    if (!res?.success) return;
+    document.getElementById('settingsForm').innerHTML = res.data.map(s => `
+        <div class="form-group">
+            <label class="form-label">${s.ayar_adi} ${s.aciklama?`<span style="font-weight:400;text-transform:none;letter-spacing:0">(${s.aciklama})</span>`:''}</label>
+            <input type="text" class="form-input setting-input" data-key="${s.ayar_adi}" value="${s.ayar_degeri||''}">
+        </div>
+    `).join('');
+}
+
+async function saveSettings() {
+    const ayarlar = [...document.querySelectorAll('.setting-input')].map(i => ({ ayar_adi:i.dataset.key, ayar_degeri:i.value }));
+    const res = await api.put('/admin/settings', { ayarlar });
+    if (res?.success) showToast('Ayarlar kaydedildi'); else showToast('Hata','error');
+}
+
+// ═══ Helpers ═══
+function statusBadge(durum) {
+    const map = { aktif:'badge-green', deneme:'badge-yellow', hediye:'badge-blue', suresi_doldu:'badge-red', iptal:'badge-red', tamamlandi:'badge-green' };
+    return `<span class="badge ${map[durum]||'badge-yellow'}">${durum||'—'}</span>`;
+}
+
+function logout() { localStorage.clear(); window.location.href='/pages/auth/login.html'; }
+
+// ═══ Init ═══
+loadOverview();
+</script>
+</body>
+</html>
