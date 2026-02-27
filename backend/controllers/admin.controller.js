@@ -18,7 +18,9 @@ exports.listBusinesses = async (req, res) => {
                    p.gorunen_adi as paket_adi,
                    (SELECT COUNT(*) FROM calisma_odalari c WHERE c.isletme_id = u.isletme_id AND c.is_active = true) as uzman_sayisi
             FROM admin_users u
-            LEFT JOIN abonelikler a ON a.isletme_id = u.isletme_id AND a.durum IN ('aktif','deneme','hediye')
+            LEFT JOIN LATERAL (
+                SELECT * FROM abonelikler WHERE isletme_id = u.isletme_id ORDER BY created_at DESC LIMIT 1
+            ) a ON true
             LEFT JOIN paketler p ON p.id = a.paket_id
             WHERE u.is_super_admin = false AND u.isletme_id IS NOT NULL
             ORDER BY u.created_at DESC
