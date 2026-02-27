@@ -80,12 +80,22 @@ app.use(express.static(path.join(__dirname, '..', 'frontend')));
 // Logo uploads
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
-// SPA fallback — bilinen API dışı route'ları frontend'e yönlendir
+// SPA fallback
 app.get('*', (req, res) => {
     if (req.path.startsWith('/api')) {
         return res.status(404).json({ success: false, message: 'Endpoint bulunamadı' });
     }
-    res.sendFile(path.join(__dirname, '..', 'frontend', 'pages', 'auth', 'login.html'));
+    // Login sayfasına yönlendir (sadece root için)
+    if (req.path === '/' || req.path === '/index.html') {
+        return res.sendFile(path.join(__dirname, '..', 'frontend', 'pages', 'auth', 'login.html'));
+    }
+    // Dosya yoksa 404
+    const filePath = path.join(__dirname, '..', 'frontend', req.path);
+    res.sendFile(filePath, (err) => {
+        if (err) {
+            res.status(404).send('Sayfa bulunamadı');
+        }
+    });
 });
 
 // ══════════════════════════════════════
